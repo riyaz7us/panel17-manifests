@@ -1,0 +1,148 @@
+# ============================================================
+# Ghost
+# Node.js publishing platform — uses ghost-cli, its own daemon
+# Good example of: npm-acquired tool + no pm2 (ghost manages itself)
+# ============================================================
+
+name: ghost
+display_name: Ghost
+description: "Professional open-source publishing platform"
+version: "1.0"
+tags: [cms, node, blog, publishing]
+
+
+# ─────────────────────────────────────────
+# RUNTIME
+# ─────────────────────────────────────────
+runtime:
+  language: node
+  version: ">=18 <21"             # Ghost has strict node version requirements
+
+
+# ─────────────────────────────────────────
+# SYSTEM PACKAGES
+# ─────────────────────────────────────────
+system_packages:
+  - apt: libvips-dev              # required for image processing
+    dnf: vips-devel
+    apk: vips-dev
+
+
+# ─────────────────────────────────────────
+# TOOLS
+# ghost-cli is NOT registered in panel — long form with npm acquisition.
+# This is the key example: panel has never heard of ghost-cli
+# but the manifest is fully self-describing.
+# ─────────────────────────────────────────
+tools:
+  - name: ghost
+    npm: "ghost-cli"
+    verify: "ghost --version"
+
+
+# ─────────────────────────────────────────
+# DATABASE
+# ─────────────────────────────────────────
+database:
+  required: true
+  engines: [mysql, mariadb]
+
+
+# ─────────────────────────────────────────
+# WEBSERVER
+# Ghost runs on port 2368 by default
+# ─────────────────────────────────────────
+webserver:
+  mode: proxy
+  port: 2368
+
+
+# ─────────────────────────────────────────
+# PROCESS MANAGER
+# Ghost manages its own process via ghost-cli — no pm2 needed
+# ─────────────────────────────────────────
+process:
+  manager: none
+
+
+# ─────────────────────────────────────────
+# VARIABLES
+# ─────────────────────────────────────────
+variables:
+  - key: ADMIN_EMAIL
+    prompt: "Admin email address"
+    required: true
+
+
+# ─────────────────────────────────────────
+# INSTALL STEPS
+# ─────────────────────────────────────────
+install:
+  - name: "Create install directory"
+    run: "mkdir -p {APP_PATH} && chown -R $USER:$USER {APP_PATH}"
+
+  - name: "Install Ghost"
+    run: >
+      ghost install
+      --db mysql
+      --dbhost {DB_HOST}
+      --dbname {DB_NAME}
+      --dbuser {DB_USER}
+      --dbpass {DB_PASS}
+      --url https://{DOMAIN}
+      --mail sendmail
+      --no-setup-nginx
+      --no-setup-ssl
+      --no-setup-systemd
+      --no-start
+      --dir {APP_PATH}
+
+  - name: "Start Ghost"
+    run: "ghost start --dir {APP_PATH}"
+
+
+# ─────────────────────────────────────────
+# COMMANDS
+# ─────────────────────────────────────────
+commands:
+  start:
+    label: "Start"
+    run: "ghost start --dir {APP_PATH}"
+
+  stop:
+    label: "Stop"
+    run: "ghost stop --dir {APP_PATH}"
+
+  restart:
+    label: "Restart"
+    run: "ghost restart --dir {APP_PATH}"
+
+  status:
+    label: "Status"
+    run: "ghost status --dir {APP_PATH}"
+
+  logs:
+    label: "View logs"
+    run: "ghost log --dir {APP_PATH}"
+
+  update:
+    label: "Update Ghost"
+    run: "ghost update --dir {APP_PATH}"
+
+
+# ─────────────────────────────────────────
+# UPDATE
+# ─────────────────────────────────────────
+update:
+  - name: "Update Ghost via CLI"
+    run: "ghost update --dir {APP_PATH}"
+
+
+# ─────────────────────────────────────────
+# DELETE
+# ─────────────────────────────────────────
+delete:
+  drop_database: true
+  remove_webserver_config: true
+  remove_files: true
+  pre_delete: "ghost stop --dir {APP_PATH}"

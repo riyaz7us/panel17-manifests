@@ -1,0 +1,229 @@
+# ============================================================
+# APP MANIFEST SCHEMA  —  panel17
+# Every field documented. All optional fields marked.
+# Use this as the reference when writing new app manifests.
+# ============================================================
+
+
+# ─────────────────────────────────────────
+# META
+# ─────────────────────────────────────────
+name: my-app                        # unique identifier, used internally
+display_name: "My App"              # shown in UI
+description: "One-line description" # optional
+version: "1.0"                      # manifest version, not app version
+tags: [cms, php, blog]              # optional — for filtering in UI
+
+
+# ─────────────────────────────────────────
+# RUNTIME
+# The language layer your app needs.
+# Panel installs/verifies this before anything else runs.
+# ─────────────────────────────────────────
+runtime:
+  language: php                     # php | node | python | ruby | go | static
+  version: ">=8.1"                  # exact "8.2", minimum ">=8.1", range ">=18 <21"
+
+
+# ─────────────────────────────────────────
+# SYSTEM PACKAGES
+# Installed via the detected OS package manager (apt/dnf/apk/pacman).
+# Simple form: engine tries the name on whatever manager is present.
+# Mapped form: use when the package name differs across distros.
+# ─────────────────────────────────────────
+system_packages:
+  - imagemagick                     # simple form — same name everywhere
+  - ffmpeg
+
+  - apt: libmysqlclient-dev         # mapped form — name differs per distro
+    dnf: mysql-devel
+    apk: mysql-dev
+    pacman: libmysqlclient
+
+  - apt: libzip-dev
+    apk: libzip-dev
+    dnf: libzip-devel
+
+
+# ─────────────────────────────────────────
+# TOOLS
+# Binaries the install/command steps depend on.
+# Panel checks PATH first — if already present, acquisition is skipped.
+#
+# SHORT FORM: tool name is registered in panel's built-in tool registry.
+# LONG FORM:  tool is unknown — describe how to acquire it.
+#
+# Acquisition methods (pick one per tool):
+#   url       — curl download, chmod +x, move to dest
+#   npm       — npm install -g <package>
+#   pip       — pip install <package>
+#   composer  — composer global require <package>
+#   gem       — gem install <package>
+#   run       — arbitrary shell command (escape hatch)
+#
+# dest is optional — defaults to /usr/local/bin/{name}
+# verify runs after acquisition to confirm the tool works
+# ─────────────────────────────────────────
+tools:
+  - wp-cli                          # short form — registered in panel
+
+  - name: some-phar-tool
+    url: "https://example.com/tool.phar"
+    dest: /usr/local/bin/tool       # optional
+    verify: "tool --version"        # optional but recommended
+
+  - name: some-npm-tool
+    npm: "package-name"
+    verify: "package-name --version"
+
+  - name: some-python-tool
+    pip: "package-name"
+
+  - name: some-php-tool
+    composer: "vendor/package"
+
+  - name: some-ruby-tool
+    gem: "gemname"
+
+  - name: exotic-tool
+    run: "curl -fsSL https://example.com/install.sh | bash"
+    verify: "exotic-tool --version"
+
+
+# ─────────────────────────────────────────
+# DATABASE
+# Panel creates the DB + user and injects credentials as variables.
+# If required is false, the section can be omitted entirely.
+# ─────────────────────────────────────────
+database:
+  required: true
+  engines: [mysql, mariadb]         # first available on the system is used
+  # engines: [postgres]
+  # engines: [mysql, mariadb, postgres, sqlite]
+
+
+# ─────────────────────────────────────────
+# WEBSERVER
+# Panel generates the nginx/caddy vhost config.
+#
+# mode: php-fpm  — serves PHP files via FPM socket (PHP apps)
+# mode: proxy    — reverse proxies to a local port (Node/Python/etc.)
+# mode: static   — serves files directly (built frontends, static sites)
+# ─────────────────────────────────────────
+webserver:
+  mode: php-fpm                     # php-fpm | proxy | static
+  root: "public"                    # document root, relative to APP_PATH
+  # port: 3000                      # required when mode is proxy
+
+
+# ─────────────────────────────────────────
+# PROCESS MANAGER
+# Only needed for apps that run a persistent process (Node, Python, etc.)
+# PHP apps served by FPM don't need this.
+#
+# manager: pm2      — uses pm2 (Node ecosystem)
+# manager: systemd  — generates a systemd unit file
+# manager: none     — app manages its own daemon (e.g. ghost-cli)
+# ─────────────────────────────────────────
+# process:
+#   manager: pm2
+#   start: "npm run start"
+#   name: "{APP_NAME}"
+
+
+# ─────────────────────────────────────────
+# VARIABLES
+# Collected from the user before install begins.
+# System variables are always available without declaring them:
+#   {APP_PATH}   — absolute install path
+#   {APP_NAME}   — app name slug
+#   {DOMAIN}     — domain name
+#   {DB_NAME}    — created database name
+#   {DB_USER}    — created database user
+#   {DB_PASS}    — created database password
+#   {DB_HOST}    — database host (usually localhost)
+#   {DB_PORT}    — database port
+# ─────────────────────────────────────────
+variables:
+  - key: ADMIN_EMAIL
+    prompt: "Admin email address"
+    required: true
+
+  - key: ADMIN_PASSWORD
+    prompt: "Admin password"
+    required: true
+    secret: true                    # masked in UI, never logged
+
+  - key: APP_DEBUG
+    prompt: "Enable debug mode?"
+    default: "false"
+    required: false
+
+
+# ─────────────────────────────────────────
+# HOOKS
+# Single commands that run at lifecycle boundaries.
+# For multi-step logic, use install/update steps instead.
+# ─────────────────────────────────────────
+hooks:
+  pre_install:  "echo 'Starting install...'"
+  post_install: "echo 'Install complete'"
+  pre_update:   "php artisan down"
+  post_update:  "php artisan up"
+  pre_delete:   "echo 'Cleaning up...'"
+  post_delete:  "echo 'Done'"
+
+
+# ─────────────────────────────────────────
+# INSTALL STEPS
+# Executed in order. Any failure stops the sequence.
+# Step progress is persisted to DB — failed installs can be resumed.
+# All {VARIABLES} are substituted before execution.
+# ─────────────────────────────────────────
+install:
+  - name: "Step description"        # shown in UI progress log
+    run: "some command"
+
+  - name: "Multi-line command"
+    run: |
+      cd {APP_PATH}
+      command one
+      command two
+
+
+# ─────────────────────────────────────────
+# COMMANDS
+# Shown as buttons/actions in the app management UI.
+# allow_args: true exposes a text input — {ARGS} is substituted with user input
+# ─────────────────────────────────────────
+commands:
+  some_command:
+    label: "Human readable label"
+    run: "command --flag {APP_PATH}"
+
+  custom_command:
+    label: "Run custom command"
+    run: "tool {ARGS} --path={APP_PATH}"
+    allow_args: true
+
+
+# ─────────────────────────────────────────
+# UPDATE
+# Steps run when user triggers an update from the UI.
+# ─────────────────────────────────────────
+update:
+  - name: "Pull latest"
+    run: "git pull"
+  - name: "Install dependencies"
+    run: "composer install --no-interaction"
+
+
+# ─────────────────────────────────────────
+# DELETE
+# Controls what gets cleaned up when app is removed.
+# pre_delete hook runs before any removal.
+# ─────────────────────────────────────────
+delete:
+  drop_database: true               # drop the DB and user created during install
+  remove_webserver_config: true     # remove nginx/caddy vhost
+  remove_files: true                # rm -rf APP_PATH

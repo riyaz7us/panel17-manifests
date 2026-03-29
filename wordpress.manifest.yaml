@@ -1,0 +1,183 @@
+# ============================================================
+# WordPress
+# PHP CMS — uses wp-cli for all install and management tasks
+# ============================================================
+
+name: wordpress
+display_name: WordPress
+description: "Open-source CMS powering 40% of the web"
+version: "1.0"
+tags: [cms, php, blog]
+
+
+# ─────────────────────────────────────────
+# RUNTIME
+# ─────────────────────────────────────────
+runtime:
+  language: php
+  version: ">=8.0"
+
+
+# ─────────────────────────────────────────
+# SYSTEM PACKAGES
+# ─────────────────────────────────────────
+system_packages:
+  - imagemagick
+
+
+# ─────────────────────────────────────────
+# TOOLS
+# wp-cli is registered in panel — short form used.
+# ─────────────────────────────────────────
+tools:
+  - wp-cli
+
+
+# ─────────────────────────────────────────
+# DATABASE
+# ─────────────────────────────────────────
+database:
+  required: true
+  engines: [mysql, mariadb]
+
+
+# ─────────────────────────────────────────
+# WEBSERVER
+# ─────────────────────────────────────────
+webserver:
+  mode: php-fpm
+  root: "."
+
+
+# ─────────────────────────────────────────
+# VARIABLES
+# ─────────────────────────────────────────
+variables:
+  - key: ADMIN_EMAIL
+    prompt: "Admin email address"
+    required: true
+
+  - key: ADMIN_PASSWORD
+    prompt: "Admin password"
+    required: true
+    secret: true
+
+
+# ─────────────────────────────────────────
+# HOOKS
+# ─────────────────────────────────────────
+hooks:
+  post_install: "wp rewrite flush --path={APP_PATH} --allow-root"
+  pre_update:   "wp maintenance-mode activate --path={APP_PATH} --allow-root"
+  post_update:  "wp maintenance-mode deactivate --path={APP_PATH} --allow-root"
+
+
+# ─────────────────────────────────────────
+# INSTALL STEPS
+# ─────────────────────────────────────────
+install:
+  - name: "Download WordPress core"
+    run: "wp core download --path={APP_PATH} --allow-root"
+
+  - name: "Create wp-config.php"
+    run: >
+      wp config create
+      --dbname={DB_NAME}
+      --dbuser={DB_USER}
+      --dbpass={DB_PASS}
+      --dbhost={DB_HOST}
+      --path={APP_PATH}
+      --allow-root
+
+  - name: "Run WordPress installer"
+    run: >
+      wp core install
+      --url=https://{DOMAIN}
+      --title={APP_NAME}
+      --admin_user=admin
+      --admin_password={ADMIN_PASSWORD}
+      --admin_email={ADMIN_EMAIL}
+      --skip-email
+      --path={APP_PATH}
+      --allow-root
+
+  - name: "Set file permissions"
+    run: |
+      chown -R www-data:www-data {APP_PATH}
+      find {APP_PATH} -type d -exec chmod 755 {} \;
+      find {APP_PATH} -type f -exec chmod 644 {} \;
+
+
+# ─────────────────────────────────────────
+# COMMANDS
+# ─────────────────────────────────────────
+commands:
+  update_core:
+    label: "Update WordPress"
+    run: "wp core update --path={APP_PATH} --allow-root"
+
+  update_plugins:
+    label: "Update all plugins"
+    run: "wp plugin update --all --path={APP_PATH} --allow-root"
+
+  update_themes:
+    label: "Update all themes"
+    run: "wp theme update --all --path={APP_PATH} --allow-root"
+
+  list_plugins:
+    label: "List plugins"
+    run: "wp plugin list --path={APP_PATH} --allow-root"
+
+  activate_plugin:
+    label: "Activate plugin"
+    run: "wp plugin activate {ARGS} --path={APP_PATH} --allow-root"
+    allow_args: true
+
+  deactivate_plugin:
+    label: "Deactivate plugin"
+    run: "wp plugin deactivate {ARGS} --path={APP_PATH} --allow-root"
+    allow_args: true
+
+  cache_flush:
+    label: "Flush cache"
+    run: "wp cache flush --path={APP_PATH} --allow-root"
+
+  db_export:
+    label: "Export database"
+    run: "wp db export {APP_PATH}/backup-$(date +%Y%m%d%H%M%S).sql --path={APP_PATH} --allow-root"
+
+  search_replace:
+    label: "Search & replace in DB"
+    run: "wp search-replace {ARGS} --path={APP_PATH} --allow-root"
+    allow_args: true
+
+  custom:
+    label: "WP-CLI command"
+    run: "wp {ARGS} --path={APP_PATH} --allow-root"
+    allow_args: true
+
+
+# ─────────────────────────────────────────
+# UPDATE
+# ─────────────────────────────────────────
+update:
+  - name: "Update core"
+    run: "wp core update --path={APP_PATH} --allow-root"
+
+  - name: "Update plugins"
+    run: "wp plugin update --all --path={APP_PATH} --allow-root"
+
+  - name: "Update themes"
+    run: "wp theme update --all --path={APP_PATH} --allow-root"
+
+  - name: "Flush cache"
+    run: "wp cache flush --path={APP_PATH} --allow-root"
+
+
+# ─────────────────────────────────────────
+# DELETE
+# ─────────────────────────────────────────
+delete:
+  drop_database: true
+  remove_webserver_config: true
+  remove_files: true

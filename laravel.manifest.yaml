@@ -1,0 +1,216 @@
+# ============================================================
+# Laravel
+# PHP framework — composer-based, artisan CLI for management
+# ============================================================
+
+name: laravel
+display_name: Laravel
+description: "PHP web application framework"
+version: "1.0"
+tags: [framework, php, api]
+
+
+# ─────────────────────────────────────────
+# RUNTIME
+# ─────────────────────────────────────────
+runtime:
+  language: php
+  version: ">=8.1"
+
+
+# ─────────────────────────────────────────
+# SYSTEM PACKAGES
+# ─────────────────────────────────────────
+system_packages:
+  - apt: libmysqlclient-dev
+    dnf: mysql-devel
+    apk: mysql-dev
+    pacman: libmysqlclient
+
+  - apt: libzip-dev
+    apk: libzip-dev
+    dnf: libzip-devel
+
+
+# ─────────────────────────────────────────
+# TOOLS
+# composer is registered in panel — short form used.
+# ─────────────────────────────────────────
+tools:
+  - composer
+
+
+# ─────────────────────────────────────────
+# DATABASE
+# ─────────────────────────────────────────
+database:
+  required: true
+  engines: [mysql, mariadb, postgres]
+
+
+# ─────────────────────────────────────────
+# WEBSERVER
+# Laravel serves from /public subdirectory
+# ─────────────────────────────────────────
+webserver:
+  mode: php-fpm
+  root: "public"
+
+
+# ─────────────────────────────────────────
+# VARIABLES
+# ─────────────────────────────────────────
+variables:
+  - key: APP_ENV
+    prompt: "Application environment"
+    default: "production"
+    required: false
+
+  - key: APP_DEBUG
+    prompt: "Enable debug mode"
+    default: "false"
+    required: false
+
+
+# ─────────────────────────────────────────
+# HOOKS
+# ─────────────────────────────────────────
+hooks:
+  pre_update:  "cd {APP_PATH} && php artisan down"
+  post_update: "cd {APP_PATH} && php artisan up"
+
+
+# ─────────────────────────────────────────
+# INSTALL STEPS
+# ─────────────────────────────────────────
+install:
+  - name: "Clone Laravel"
+    run: "git clone -b 12.x https://github.com/laravel/laravel.git {APP_PATH}"
+
+  - name: "Install dependencies"
+    run: "cd {APP_PATH} && composer install --no-interaction --prefer-dist --optimize-autoloader"
+
+  - name: "Create .env file"
+    run: |
+      cat > {APP_PATH}/.env << EOF
+      APP_NAME={APP_NAME}
+      APP_ENV={APP_ENV}
+      APP_DEBUG={APP_DEBUG}
+      APP_URL=https://{DOMAIN}
+
+      DB_CONNECTION=mysql
+      DB_HOST={DB_HOST}
+      DB_PORT={DB_PORT}
+      DB_DATABASE={DB_NAME}
+      DB_USERNAME={DB_USER}
+      DB_PASSWORD={DB_PASS}
+
+      CACHE_DRIVER=file
+      QUEUE_CONNECTION=sync
+      SESSION_DRIVER=file
+      EOF
+
+  - name: "Generate application key"
+    run: "cd {APP_PATH} && php artisan key:generate --force"
+
+  - name: "Run migrations"
+    run: "cd {APP_PATH} && php artisan migrate --force"
+
+  - name: "Create storage link"
+    run: "cd {APP_PATH} && php artisan storage:link"
+
+  - name: "Set file permissions"
+    run: |
+      chown -R www-data:www-data {APP_PATH}
+      chmod -R 775 {APP_PATH}/storage
+      chmod -R 775 {APP_PATH}/bootstrap/cache
+
+
+# ─────────────────────────────────────────
+# COMMANDS
+# ─────────────────────────────────────────
+commands:
+  migrate:
+    label: "Run migrations"
+    run: "cd {APP_PATH} && php artisan migrate --force"
+
+  migrate_rollback:
+    label: "Rollback migrations"
+    run: "cd {APP_PATH} && php artisan migrate:rollback"
+
+  seed:
+    label: "Run seeders"
+    run: "cd {APP_PATH} && php artisan db:seed --force"
+
+  cache_clear:
+    label: "Clear cache"
+    run: "cd {APP_PATH} && php artisan cache:clear"
+
+  config_clear:
+    label: "Clear config cache"
+    run: "cd {APP_PATH} && php artisan config:clear"
+
+  config_cache:
+    label: "Cache config"
+    run: "cd {APP_PATH} && php artisan config:cache"
+
+  route_cache:
+    label: "Cache routes"
+    run: "cd {APP_PATH} && php artisan route:cache"
+
+  view_clear:
+    label: "Clear view cache"
+    run: "cd {APP_PATH} && php artisan view:clear"
+
+  queue_restart:
+    label: "Restart queue workers"
+    run: "cd {APP_PATH} && php artisan queue:restart"
+
+  maintenance_on:
+    label: "Enable maintenance mode"
+    run: "cd {APP_PATH} && php artisan down"
+
+  maintenance_off:
+    label: "Disable maintenance mode"
+    run: "cd {APP_PATH} && php artisan up"
+
+  optimize:
+    label: "Optimize"
+    run: "cd {APP_PATH} && php artisan optimize"
+
+  custom_artisan:
+    label: "Artisan command"
+    run: "cd {APP_PATH} && php artisan {ARGS}"
+    allow_args: true
+
+
+# ─────────────────────────────────────────
+# UPDATE
+# ─────────────────────────────────────────
+update:
+  - name: "Pull latest changes"
+    run: "cd {APP_PATH} && git pull"
+
+  - name: "Install dependencies"
+    run: "cd {APP_PATH} && composer install --no-interaction --prefer-dist --optimize-autoloader"
+
+  - name: "Run migrations"
+    run: "cd {APP_PATH} && php artisan migrate --force"
+
+  - name: "Clear and rebuild caches"
+    run: |
+      cd {APP_PATH}
+      php artisan cache:clear
+      php artisan config:cache
+      php artisan route:cache
+      php artisan view:clear
+      php artisan optimize
+
+
+# ─────────────────────────────────────────
+# DELETE
+# ─────────────────────────────────────────
+delete:
+  drop_database: true
+  remove_webserver_config: true
+  remove_files: true

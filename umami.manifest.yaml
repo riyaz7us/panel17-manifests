@@ -1,0 +1,147 @@
+# ============================================================
+# Umami
+# Node.js analytics platform — pm2 process, proxy webserver
+# ============================================================
+
+name: umami
+display_name: Umami Analytics
+description: "Privacy-focused open-source web analytics"
+version: "1.0"
+tags: [analytics, node, privacy]
+
+
+# ─────────────────────────────────────────
+# RUNTIME
+# ─────────────────────────────────────────
+runtime:
+  language: node
+  version: ">=18"
+
+
+# ─────────────────────────────────────────
+# TOOLS
+# pm2 is registered in panel — short form used.
+# ─────────────────────────────────────────
+tools:
+  - pm2
+
+
+# ─────────────────────────────────────────
+# DATABASE
+# ─────────────────────────────────────────
+database:
+  required: true
+  engines: [mysql, postgres]
+
+
+# ─────────────────────────────────────────
+# WEBSERVER
+# Umami runs on port 3000 — panel proxies to it
+# ─────────────────────────────────────────
+webserver:
+  mode: proxy
+  port: 3000
+
+
+# ─────────────────────────────────────────
+# PROCESS MANAGER
+# ─────────────────────────────────────────
+process:
+  manager: pm2
+  start: "npm run start"
+  name: "{APP_NAME}"
+
+
+# ─────────────────────────────────────────
+# VARIABLES
+# ─────────────────────────────────────────
+variables:
+  - key: HASH_SALT
+    prompt: "Random salt string for password hashing"
+    required: true
+    secret: true
+
+
+# ─────────────────────────────────────────
+# INSTALL STEPS
+# ─────────────────────────────────────────
+install:
+  - name: "Clone repository"
+    run: "git clone https://github.com/umami-software/umami.git {APP_PATH}"
+
+  - name: "Install dependencies"
+    run: "cd {APP_PATH} && npm install"
+
+  - name: "Write .env file"
+    run: |
+      cat > {APP_PATH}/.env << EOF
+      DATABASE_URL=mysql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}
+      HASH_SALT={HASH_SALT}
+      EOF
+
+  - name: "Build application"
+    run: "cd {APP_PATH} && npm run build"
+
+  - name: "Run database migrations"
+    run: "cd {APP_PATH} && npm run db-migrate"
+
+  - name: "Start with pm2"
+    run: |
+      cd {APP_PATH}
+      pm2 start npm --name {APP_NAME} -- run start
+      pm2 save
+
+
+# ─────────────────────────────────────────
+# COMMANDS
+# ─────────────────────────────────────────
+commands:
+  restart:
+    label: "Restart"
+    run: "pm2 restart {APP_NAME}"
+
+  stop:
+    label: "Stop"
+    run: "pm2 stop {APP_NAME}"
+
+  start:
+    label: "Start"
+    run: "pm2 start {APP_NAME}"
+
+  logs:
+    label: "View logs"
+    run: "pm2 logs {APP_NAME} --lines 200 --nostream"
+
+  status:
+    label: "Process status"
+    run: "pm2 show {APP_NAME}"
+
+
+# ─────────────────────────────────────────
+# UPDATE
+# ─────────────────────────────────────────
+update:
+  - name: "Pull latest changes"
+    run: "cd {APP_PATH} && git pull"
+
+  - name: "Install dependencies"
+    run: "cd {APP_PATH} && npm install"
+
+  - name: "Run migrations"
+    run: "cd {APP_PATH} && npm run db-migrate"
+
+  - name: "Rebuild"
+    run: "cd {APP_PATH} && npm run build"
+
+  - name: "Restart process"
+    run: "pm2 restart {APP_NAME}"
+
+
+# ─────────────────────────────────────────
+# DELETE
+# ─────────────────────────────────────────
+delete:
+  drop_database: true
+  remove_webserver_config: true
+  remove_files: true
+  pre_delete: "pm2 delete {APP_NAME} && pm2 save"
