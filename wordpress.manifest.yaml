@@ -22,7 +22,7 @@ runtime:
 # SYSTEM PACKAGES
 # ─────────────────────────────────────────
 system_packages:
-  - imagemagick
+  - name: imagemagick
 
 
 # ─────────────────────────────────────────
@@ -30,7 +30,7 @@ system_packages:
 # wp-cli is registered in panel — short form used.
 # ─────────────────────────────────────────
 tools:
-  - wp-cli
+  - name: wp-cli
 
 
 # ─────────────────────────────────────────
