@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "ghost",
+    "name": "Ghost",
+    "description": "Professional open-source publishing platform",
+    "tags": ["cms", "node", "blog", "publishing"]
+  },
+  {
+    "slug": "umami",
+    "name": "Umami Analytics",
+    "description": "Privacy-focused open-source web analytics",
+    "tags": ["analytics", "node", "privacy"]
+  },
+  {
+    "slug": "laravel",
+    "name": "Laravel",
+    "description": "PHP web application framework",
+    "tags": ["framework", "php", "api"]
+  },
+  {
+    "slug": "wordpress",
+    "name": "WordPress",
+    "description": "Open-source CMS powering 40% of the web",
+    "tags": ["cms", "php", "blog"]
+  }
+]
