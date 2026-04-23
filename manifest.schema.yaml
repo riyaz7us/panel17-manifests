@@ -47,43 +47,29 @@ system_packages:
 
 # ─────────────────────────────────────────
 # TOOLS
-# Binaries the install/command steps depend on.
+# Binaries install/command steps depend on.
 # Panel checks PATH first — if already present, acquisition is skipped.
-#
-# SHORT FORM: tool name is registered in panel's built-in tool registry.
-# LONG FORM:  tool is unknown — describe how to acquire it.
 #
 # Acquisition methods (pick one per tool):
 #   url       — curl download, chmod +x, move to dest
-#   npm       — npm install -g <package>
-#   pip       — pip install <package>
-#   composer  — composer global require <package>
-#   gem       — gem install <package>
 #   run       — arbitrary shell command (escape hatch)
 #
 # dest is optional — defaults to /usr/local/bin/{name}
 # verify runs after acquisition to confirm the tool works
 # ─────────────────────────────────────────
 tools:
-  - wp-cli                          # short form — registered in panel
-
-  - name: some-phar-tool
-    url: "https://example.com/tool.phar"
-    dest: /usr/local/bin/tool       # optional
-    verify: "tool --version"        # optional but recommended
-
   - name: some-npm-tool
-    npm: "package-name"
+    run: "npm install -g package-name"
     verify: "package-name --version"
 
   - name: some-python-tool
-    pip: "package-name"
+    run: "pip install package-name"
 
   - name: some-php-tool
-    composer: "vendor/package"
+    run: "composer global require vendor/package"
 
   - name: some-ruby-tool
-    gem: "gemname"
+    run: "gem install gemname"
 
   - name: exotic-tool
     run: "curl -fsSL https://example.com/install.sh | bash"
@@ -94,12 +80,19 @@ tools:
 # DATABASE
 # Panel creates the DB + user and injects credentials as variables.
 # If required is false, the section can be omitted entirely.
-# ─────────────────────────────────────────
+# ------------------------------------------------------------
 database:
   required: true
-  engines: [mysql, mariadb]         # first available on the system is used
-  # engines: [postgres]
-  # engines: [mysql, mariadb, postgres, sqlite]
+  engines:
+    - name: mysql
+      version: ">=8.0"
+    - name: mariadb
+      version: ">=10.0"
+  # engines:
+  #   - name: postgres
+  #     version: ">=13"
+  #   - name: sqlite
+  #     version: ">=3.0"
 
 
 # ─────────────────────────────────────────

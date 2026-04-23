@@ -35,8 +35,8 @@ system_packages:
 # but the manifest is fully self-describing.
 # ─────────────────────────────────────────
 tools:
-  - name: ghost
-    npm: "ghost-cli"
+  - name: "ghost"
+    run: "npm install -g ghost-cli"
     verify: "ghost --version"
 
 
@@ -45,7 +45,11 @@ tools:
 # ─────────────────────────────────────────
 database:
   required: true
-  engines: [mysql, mariadb]
+  engines:
+    - name: mysql
+      version: ">=8.0"
+    - name: mariadb
+      version: ">=10.0"
 
 
 # ─────────────────────────────────────────

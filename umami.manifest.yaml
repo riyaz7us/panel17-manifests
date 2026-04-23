@@ -23,15 +23,21 @@ runtime:
 # pm2 is registered in panel — short form used.
 # ─────────────────────────────────────────
 tools:
-  - pm2
+  - name: "pm2"
+    run: "npm install -g pm2"
+    verify: "pm2 --version"
 
 
 # ─────────────────────────────────────────
 # DATABASE
-# ─────────────────────────────────────────
+# ------------------------------------------------------------ 
 database:
   required: true
-  engines: [mysql, postgres]
+  engines:
+    - name: mysql
+      version: ">=8.0"
+    - name: postgres
+      version: ">=13"
 
 
 # ─────────────────────────────────────────
