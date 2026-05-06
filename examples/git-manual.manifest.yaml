@@ -1,0 +1,64 @@
+# ============================================================
+# Git Manual Example
+# Shows how to deploy from a local git repository
+# ============================================================
+
+name: git-manual
+display_name: Git Manual Example
+description: "Deploy from local git repository"
+version: "1.0"
+tags: [example, git, manual]
+
+
+runtime:
+  language: node
+  version: ">=18"
+
+
+# ─────────────────────────────────────────
+# DEPLOY
+# Deploy from user's local git repository
+# ─────────────────────────────────────────
+deploy:
+  method: manual
+  source: "/home/user/projects/my-node-app"  # Local git repository path
+
+
+webserver:
+  mode: proxy
+  port: 3000
+
+
+process:
+  manager: pm2
+  start: "npm start"
+  name: "{APP_NAME}"
+
+
+install:
+  - name: "Install dependencies"
+    run: "cd {APP_PATH} && npm ci --production"
+
+
+commands:
+  git_pull:
+    label: "Git Pull"
+    run: "cd {APP_PATH} && git pull origin HEAD"
+
+  git_reset:
+    label: "Git Reset (Hard)"
+    run: "cd {APP_PATH} && git fetch origin && git reset --hard origin/HEAD"
+
+  git_status:
+    label: "Git Status"
+    run: "cd {APP_PATH} && git status"
+
+  restart:
+    label: "Restart App"
+    run: "pm2 restart {APP_NAME}"
+
+
+delete:
+  remove_webserver_config: true
+  remove_files: true
+  pre_delete: "pm2 delete {APP_NAME}"

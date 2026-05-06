@@ -27,7 +27,7 @@ runtime:
 
 # ─────────────────────────────────────────
 # SYSTEM PACKAGES
-# Installed via the detected OS package manager (apt/dnf/apk/pacman).
+# Installed via the detected OS package manager (apt/dnf).
 # Simple form: engine tries the name on whatever manager is present.
 # Mapped form: use when the package name differs across distros.
 # ─────────────────────────────────────────
@@ -37,11 +37,8 @@ system_packages:
 
   - apt: libmysqlclient-dev         # mapped form — name differs per distro
     dnf: mysql-devel
-    apk: mysql-dev
-    pacman: libmysqlclient
 
   - apt: libzip-dev
-    apk: libzip-dev
     dnf: libzip-devel
 
 
@@ -74,6 +71,21 @@ tools:
   - name: exotic-tool
     run: "curl -fsSL https://example.com/install.sh | bash"
     verify: "exotic-tool --version"
+
+
+# ─────────────────────────────────────────
+# DEPLOY
+# Controls how application source code is obtained.
+# If omitted, assumes source is already present in install steps.
+# ─────────────────────────────────────────
+deploy:
+  default: git                       # git|upload|manual - default method
+  git:
+    source: "https://github.com/user/repo.git"  # git URL
+    branch: "main"                               # optional branch
+  upload: true                      # enable upload method (folder/zip)
+  manual: true                      # enable manual path method
+  destination: "subdir"             # optional subdirectory within APP_PATH
 
 
 # ─────────────────────────────────────────

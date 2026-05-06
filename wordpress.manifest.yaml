@@ -31,7 +31,7 @@ system_packages:
 # ─────────────────────────────────────────
 tools:
   - name: "wp-cli"
-    run: "wp cli install --yes"
+    run: "curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp"
     verify: "wp --version"
 
 
@@ -41,10 +41,10 @@ tools:
 database:
   required: true
   engines:
-    - name: mysql
-      version: ">=8.0"
     - name: mariadb
       version: ">=10.0"
+    - name: mysql
+      version: ">=8.0"
 
 
 # ─────────────────────────────────────────

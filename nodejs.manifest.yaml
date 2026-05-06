@@ -1,14 +1,13 @@
 # ============================================================
-# Ghost
-# Node.js publishing platform — uses ghost-cli, its own daemon
-# Good example of: npm-acquired tool + no pm2 (ghost manages itself)
+# Node.js Application
+# Generic Node.js app deployment with npm/yarn support
 # ============================================================
 
-name: ghost
-display_name: Ghost
-description: "Professional open-source publishing platform"
+name: nodejs
+display_name: Node.js Application
+description: "Generic Node.js web application"
 version: "1.0"
-tags: [cms, node, blog, publishing]
+tags: [node, javascript, api]
 
 
 # ─────────────────────────────────────────
@@ -16,137 +15,134 @@ tags: [cms, node, blog, publishing]
 # ─────────────────────────────────────────
 runtime:
   language: node
-  version: ">=18"             # Ghost has strict node version requirements
+  version: ">=18"
 
 
 # ─────────────────────────────────────────
-# SYSTEM PACKAGES
+# DEPLOY
+# User can choose deployment method
 # ─────────────────────────────────────────
-system_packages:
-  - apt: libvips-dev              # required for image processing
-    dnf: vips-devel
-    apk: vips-dev
+deploy:
+  default: upload
+  upload: true
+  manual: true
+  git:
+    source: "https://github.com/user/nodejs-app-template.git"
+    branch: "main"
 
 
 # ─────────────────────────────────────────
-# TOOLS
-# ghost-cli is NOT registered in panel — long form with npm acquisition.
-# This is the key example: panel has never heard of ghost-cli
-# but the manifest is fully self-describing.
-# ─────────────────────────────────────────
-tools:
-  - name: "ghost"
-    run: "npm install -g ghost-cli"
-    verify: "ghost --version"
-
-
-# ─────────────────────────────────────────
-# DATABASE
-# ─────────────────────────────────────────
-database:
-  required: true
-  engines:
-    - name: mariadb
-      version: ">=10.0"
-    - name: mysql
-      version: ">=8.0"
+# DATABASE (optional)
+# Uncomment if your app needs a database
+# ------------------------------------------------------------
+# database:
+#   required: true
+#   engines:
+#     - name: mysql
+#       version: ">=8.0"
+#     - name: postgres
+#       version: ">=13"
 
 
 # ─────────────────────────────────────────
 # WEBSERVER
-# Ghost runs on port 2368 by default
+# Proxy to Node.js application on port 3000
 # ─────────────────────────────────────────
 webserver:
   mode: proxy
-  port: 2368
+  port: 3000
 
 
 # ─────────────────────────────────────────
 # PROCESS MANAGER
-# Ghost manages its own process via ghost-cli — no pm2 needed
+# Use pm2 to manage the Node.js process
 # ─────────────────────────────────────────
 process:
-  manager: none
+  manager: pm2
+  start: "npm start"
+  name: "{APP_NAME}"
 
 
 # ─────────────────────────────────────────
 # VARIABLES
 # ─────────────────────────────────────────
 variables:
-  - key: ADMIN_EMAIL
-    prompt: "Admin email address"
-    required: true
+  - key: NODE_ENV
+    prompt: "Node environment"
+    default: "production"
+    required: false
+
+  - key: PORT
+    prompt: "Application port"
+    default: "3000"
+    required: false
 
 
 # ─────────────────────────────────────────
-# INSTALL STEPS
+# BUILD STEPS
+# Install dependencies and build the application
 # ─────────────────────────────────────────
 install:
-  - name: "Create install directory"
-    run: "mkdir -p {APP_PATH} && chown -R $USER:$USER {APP_PATH}"
+  - name: "Install dependencies"
+    run: "cd {APP_PATH} && npm ci --production"
 
-  - name: "Install Ghost"
-    run: >
-      ghost install
-      --db mysql
-      --dbhost {DB_HOST}
-      --dbname {DB_NAME}
-      --dbuser {DB_USER}
-      --dbpass {DB_PASS}
-      --url https://{DOMAIN}
-      --mail sendmail
-      --no-setup-nginx
-      --no-setup-ssl
-      --no-setup-systemd
-      --no-start
-      --dir {APP_PATH}
-
-  - name: "Start Ghost"
-    run: "ghost start --dir {APP_PATH}"
+  - name: "Build application (if needed)"
+    run: |
+      cd {APP_PATH}
+      if [ -f "package.json" ] && grep -q '"build"' package.json; then
+        npm run build
+      fi
 
 
 # ─────────────────────────────────────────
 # COMMANDS
+# Common Node.js management commands
 # ─────────────────────────────────────────
 commands:
-  start:
-    label: "Start"
-    run: "ghost start --dir {APP_PATH}"
+  install_deps:
+    label: "Install dependencies"
+    run: "cd {APP_PATH} && npm install"
 
-  stop:
-    label: "Stop"
-    run: "ghost stop --dir {APP_PATH}"
-
-  restart:
-    label: "Restart"
-    run: "ghost restart --dir {APP_PATH}"
-
-  status:
-    label: "Status"
-    run: "ghost status --dir {APP_PATH}"
+  run_dev:
+    label: "Run in development"
+    run: "cd {APP_PATH} && npm run dev"
 
   logs:
     label: "View logs"
-    run: "ghost log --dir {APP_PATH}"
+    run: "pm2 logs {APP_NAME}"
 
-  update:
-    label: "Update Ghost"
-    run: "ghost update --dir {APP_PATH}"
+  restart:
+    label: "Restart application"
+    run: "pm2 restart {APP_NAME}"
+
+  stop:
+    label: "Stop application"
+    run: "pm2 stop {APP_NAME}"
+
+  custom_npm:
+    label: "Run npm command"
+    run: "cd {APP_PATH} && npm {ARGS}"
+    allow_args: true
 
 
 # ─────────────────────────────────────────
 # UPDATE
+# Pull latest changes and reinstall dependencies
 # ─────────────────────────────────────────
 update:
-  - name: "Update Ghost via CLI"
-    run: "ghost update --dir {APP_PATH}"
+  - name: "Install dependencies"
+    run: "cd {APP_PATH} && npm ci --production"
+
+  - name: "Restart application"
+    run: "pm2 restart {APP_NAME}"
 
 
 # ─────────────────────────────────────────
 # DELETE
+# Clean up pm2 process and remove files
 # ─────────────────────────────────────────
 delete:
-  drop_database: true
+  drop_database: false              # Set to true if using database
   remove_webserver_config: true
   remove_files: true
-  pre_delete: "ghost stop --dir {APP_PATH}"
+  pre_delete: "pm2 delete {APP_NAME}"

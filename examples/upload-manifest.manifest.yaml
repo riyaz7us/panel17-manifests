@@ -1,0 +1,85 @@
+# ============================================================
+# Upload Example
+# Shows how to deploy from user-uploaded files
+# ============================================================
+
+name: upload-example
+display_name: Upload Example
+description: "Deploy from uploaded files"
+version: "1.0"
+tags: [example, upload]
+
+
+runtime:
+  language: php
+  version: ">=8.1"
+
+
+# ─────────────────────────────────────────
+# DEPLOY
+# User uploads source code via UI
+# ─────────────────────────────────────────
+deploy:
+  method: upload
+  # Source will be set via UI upload component
+
+
+database:
+  required: true
+  engines:
+    - name: mysql
+      version: ">=8.0"
+
+
+webserver:
+  mode: php-fpm
+  root: "public"
+
+
+variables:
+  - key: APP_NAME
+    prompt: "Application name"
+    required: true
+
+  - key: APP_DEBUG
+    prompt: "Enable debug?"
+    default: "false"
+    required: false
+
+
+install:
+  - name: "Install dependencies"
+    run: "cd {APP_PATH} && composer install --no-interaction"
+
+  - name: "Create .env file"
+    run: |
+      cat > {APP_PATH}/.env << EOF
+      APP_NAME={APP_NAME}
+      APP_DEBUG={APP_DEBUG}
+      APP_URL=https://{DOMAIN}
+      DB_CONNECTION=mysql
+      DB_HOST={DB_HOST}
+      DB_PORT={DB_PORT}
+      DB_DATABASE={DB_NAME}
+      DB_USERNAME={DB_USER}
+      DB_PASSWORD={DB_PASS}
+      EOF
+
+  - name: "Run migrations"
+    run: "cd {APP_PATH} && php artisan migrate --force"
+
+
+commands:
+  migrate:
+    label: "Run migrations"
+    run: "cd {APP_PATH} && php artisan migrate --force"
+
+  cache_clear:
+    label: "Clear cache"
+    run: "cd {APP_PATH} && php artisan cache:clear"
+
+
+delete:
+  drop_database: true
+  remove_webserver_config: true
+  remove_files: true

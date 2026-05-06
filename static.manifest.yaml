@@ -1,0 +1,100 @@
+# ============================================================
+# Static Site
+# For static HTML/CSS/JS sites, SPAs, or built frontend apps
+# ============================================================
+
+name: static
+display_name: Static Site
+description: "Static HTML/CSS/JavaScript website"
+version: "1.0"
+tags: [static, html, css, javascript]
+
+
+# ─────────────────────────────────────────
+# RUNTIME
+# Static sites don't need a runtime language
+# ─────────────────────────────────────────
+runtime:
+  language: static
+
+
+# ─────────────────────────────────────────
+# DEPLOY
+# User can choose deployment method
+# ─────────────────────────────────────────
+deploy:
+  default: upload
+  upload: true
+  manual: true
+
+
+# ─────────────────────────────────────────
+# WEBSERVER
+# Serve files directly via nginx
+# ─────────────────────────────────────────
+webserver:
+  mode: static
+  root: "."
+
+
+# ─────────────────────────────────────────
+# VARIABLES
+# ─────────────────────────────────────────
+variables:
+  - key: INDEX_FILE
+    prompt: "Index file name"
+    default: "index.html"
+    required: false
+
+
+# ─────────────────────────────────────────
+# COMMANDS
+# Static site management commands
+# ─────────────────────────────────────────
+commands:
+  list_files:
+    label: "List files"
+    run: "ls -la {APP_PATH}"
+
+  find_html:
+    label: "Find HTML files"
+    run: "find {APP_PATH} -name '*.html'"
+
+  compress_assets:
+    label: "Compress assets"
+    run: |
+      cd {APP_PATH}
+      # Compress CSS files
+      find . -name '*.css' -exec gzip -k {} \;
+      # Compress JS files  
+      find . -name '*.js' -exec gzip -k {} \;
+
+  create_sitemap:
+    label: "Generate sitemap"
+    run: |
+      cd {APP_PATH}
+      find . -name '*.html' | sed 's/^\.\///' > sitemap.txt
+
+  custom_command:
+    label: "Custom command"
+    run: "cd {APP_PATH} && {ARGS}"
+    allow_args: true
+
+
+# ─────────────────────────────────────────
+# UPDATE
+# For static sites, update just means refreshing files
+# ─────────────────────────────────────────
+update:
+  - name: "No update needed"
+    run: "echo 'Static site updated via file upload'"
+
+
+# ─────────────────────────────────────────
+# DELETE
+# Remove files and webserver config
+# ─────────────────────────────────────────
+delete:
+  drop_database: false
+  remove_webserver_config: true
+  remove_files: true
